@@ -16,8 +16,9 @@ type (
 	}
 
 	From struct {
-		ChannelUserID string
-		Channel       Channel
+		ChannelUserID     string
+		Channel           Channel
+		ChannelInternalID string
 	}
 
 	Channel int
@@ -92,8 +93,11 @@ func (ct *Chat) PreviousConversations() []*Conversation {
 	return ct.Conversations[:]
 }
 
-func (ct *Chat) CurrentConversation() *Conversation {
-	return ct.Current
+func (ct *Chat) CurrentConversation() (*Conversation, error) {
+	if ct.Current == nil {
+		return nil, errors.New("no conversation")
+	}
+	return ct.Current, nil
 }
 
 func (ct *Chat) Prompt(q string) error {

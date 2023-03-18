@@ -8,8 +8,10 @@ require (
 	github.com/go-jimu/contrib/logger/zap v0.1.0
 	github.com/go-playground/validator/v10 v10.11.2
 	github.com/go-sql-driver/mysql v1.7.0
+	github.com/go-telegram-bot-api/telegram-bot-api/v5 v5.5.1
 	github.com/jmoiron/sqlx v1.3.5
 	github.com/oklog/ulid/v2 v2.1.0
+	github.com/sashabaranov/go-openai v1.5.3
 	github.com/stretchr/testify v1.8.2
 	go.uber.org/zap v1.24.0
 )
