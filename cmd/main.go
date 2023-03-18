@@ -9,7 +9,6 @@ import (
 	"github.com/go-jimu/components/mediator"
 	"github.com/jacexh/chatgpt-bot/internal/bootstrap/httpsrv"
 	"github.com/jacexh/chatgpt-bot/internal/bootstrap/mysql"
-	"github.com/jacexh/chatgpt-bot/internal/business/user"
 	"github.com/jacexh/chatgpt-bot/internal/pkg/context"
 	"github.com/jacexh/chatgpt-bot/internal/pkg/eventbus"
 	"github.com/jacexh/chatgpt-bot/internal/pkg/log"
@@ -41,11 +40,10 @@ func main() {
 	eventbus.SetDefault(eb)
 
 	// driver layer
-	conn := mysql.NewMySQLDriver(opt.MySQL)
+	_ = mysql.NewMySQLDriver(opt.MySQL)
 	cg := httpsrv.NewHTTPServer(opt.HTTPServer, log)
 
 	// each business layer
-	user.Init(eb, conn, cg)
 
 	// graceful shutdown
 	ctx, stop := signal.NotifyContext(context.RootContext(), syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
