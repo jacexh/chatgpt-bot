@@ -14,3 +14,9 @@ mysql:
   max_idle_time: ${MYSQL_MAX_IDLE_TIME:60s}
 http-server:
   addr: ":8080"
+chatgpt:
+  proxy: ${CHATGPT_PROXY:}
+  base_url: ${CHATGPT_BASE_URL:}
+  access_token: ${CHATGPT_ACCESS_TOKEN:abc}
+telegram:
+  access_token: ${TELEGRAM_ACCESS_TOKEN:abc}
