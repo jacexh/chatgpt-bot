@@ -18,6 +18,10 @@ type TelegramEventHandler struct {
 	log logger.Logger
 }
 
+func NewTelegramEventHandler(log logger.Logger, bot *tgbotapi.BotAPI) mediator.EventHandler {
+	return &TelegramEventHandler{log: log, bot: bot}
+}
+
 func (ev *TelegramEventHandler) Listening() []mediator.EventKind {
 	return []mediator.EventKind{
 		domain.KindChatFinished,
@@ -51,7 +55,7 @@ func (ev *TelegramEventHandler) Handle(ctx context.Context, event mediator.Event
 		return
 	}
 
-	log := logger.With(ev.log, "chat_id", e.ChatID, "telegram_user_id", e.From.ChannelUserID, "telegrame_internal_id", e.From.ChannelInternalID, "event_kind", event.Kind())
+	log := logger.With(ev.log, "chat_id", e.ChatID, "telegram_user_id", e.From.ChannelUserID, "telegram_internal_id", e.From.ChannelInternalID, "event_kind", event.Kind())
 	helper := logger.NewHelper(log)
 
 	chatID, msgID, err := ev.ParseIDs(e.From.ChannelInternalID)
