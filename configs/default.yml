@@ -9,8 +9,15 @@ mysql:
   port: ${MYSQL_PORT:3306}
   user: ${MYSQL_USER:root}
   password: ${MYSQL_PASSWORD:admin123}
-  database: ${MYSQL_DATABASE:example}
+  database: ${MYSQL_DATABASE:chatgpt-bot}
   max_open_conns: ${MYSQL_MAX_OPEN_CONNS:5}
   max_idle_time: ${MYSQL_MAX_IDLE_TIME:60s}
 http-server:
   addr: ":8080"
+chatgpt:
+  proxy: ${CHATGPT_PROXY:}
+  base_url: ${CHATGPT_BASE_URL:}
+  access_token: ${CHATGPT_ACCESS_TOKEN:abc}
+telegram:
+  access_token: ${TELEGRAM_ACCESS_TOKEN:abc}
+  webhook_link: ${TELEGRAM_WEBHOOK_LINK:http://chatgpt-bot.foobar.com/api/v1/telegram/callback}

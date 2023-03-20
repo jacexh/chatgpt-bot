@@ -15,3 +15,5 @@
 # vendor/
 
 coverage.txt
+go.work.sum
+*.env
