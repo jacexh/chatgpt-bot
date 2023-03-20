@@ -49,7 +49,7 @@ func (app *Application) Prompt(ctx context.Context, log logger.Logger, f domain.
 		return err
 	}
 	chat.Event.Raise(app.mediator)
-	helper.Info("prompt", "chat_id", chat.ID)
+	helper.Info("prompt", "chat_id", chat.ID, "prompt", q)
 
 	go func(f domain.From, log logger.Logger) {
 		ctx, cancel := pkgCtx.GenContextWithTimeout(3 * time.Minute)
@@ -61,10 +61,13 @@ func (app *Application) Prompt(ctx context.Context, log logger.Logger, f domain.
 			helper.Error("failed to get chat from repository to call chatgpt api", "chat_id", chat.ID, "error", err.Error())
 			return
 		}
-		if _, err := app.api.Chat(ctx, chat); err != nil {
+		conv, err := app.api.Chat(ctx, chat)
+		if err != nil {
 			helper.Error("failed to get answer from chatgpt", "chat_id", chat.ID, "error", err.Error())
 			return
 		}
+		helper.Info("got answer", "chat_id", chat.ID, "answer", conv.Answer)
+
 		if err := app.repo.Save(ctx, chat); err != nil {
 			helper.Error("failed to save chat after get answer", "chat_id", chat.ID, "error", err.Error())
 			return

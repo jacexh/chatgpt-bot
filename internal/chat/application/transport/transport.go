@@ -68,9 +68,7 @@ func (tg *controller) Handle(w http.ResponseWriter, r *http.Request) {
 	if update.Message != nil {
 		switch update.Message.Text {
 		case "/start":
-			if err = tg.app.NewChat(r.Context(), log, from); err == nil {
-
-			}
+			_ = tg.app.NewChat(r.Context(), log, from)
 
 		case "/end":
 			tg.app.End(r.Context(), log, from)
