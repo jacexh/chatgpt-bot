@@ -32,7 +32,7 @@ func (gpt *chatgptService) Chat(ctx context.Context, chat *domain.Chat) (*domain
 		}
 	}
 	messages[len(history)] = openai.ChatCompletionMessage{
-		Content: current.Answer,
+		Content: current.Prompt,
 		Role:    openai.ChatMessageRoleUser,
 	}
 
