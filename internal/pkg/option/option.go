@@ -15,7 +15,7 @@ const (
 	defaultConfig = "default"
 	configDir     = "./configs"
 	EnvProfile    = "ENV_PROFILE"
-	EnvVarsPrefix = "APP_"
+	EnvVarsPrefix = "BOT_"
 )
 
 func Load(opts ...config.Option) config.Config {
