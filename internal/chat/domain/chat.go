@@ -143,7 +143,9 @@ func (ct *Chat) Shutdown() {
 	if ct.Status != StatusEnded {
 		ct.Status = StatusEnded
 		ct.Event.Add(NewEventChatShutdown(ct.ID, ct.From, emptyConversation))
-		ct.Interrupt(errors.New("shutdown"))
+		if ct.Current != nil {
+			ct.Interrupt(errors.New("shutdown"))
+		}
 	}
 }
 
