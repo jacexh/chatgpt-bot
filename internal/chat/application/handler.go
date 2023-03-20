@@ -67,10 +67,10 @@ func (ev *TelegramEventHandler) Handle(ctx context.Context, event mediator.Event
 	var chattable tgbotapi.Chattable
 	switch e.Kind() {
 	case domain.KindChatStartted:
-		return
+		chattable = tgbotapi.NewMessage(chatID, fmt.Sprintf("[%s] 已经开启新的会话", e.ChatID))
 
 	case domain.KindChatFinished, domain.KindChatShutdown:
-		chattable = tgbotapi.NewMessage(chatID, "The current chat has been ended.")
+		chattable = tgbotapi.NewMessage(chatID, fmt.Sprintf("[%s] 当前会话已经结束", e.ChatID))
 
 	case domain.KindConversationCreated:
 		chattable = tgbotapi.NewChatAction(chatID, "typing...")

@@ -24,7 +24,7 @@ func (app *Application) NewChat(ctx context.Context, log logger.Logger, f domain
 	chat := domain.NewChat(f)
 	err := app.repo.Save(ctx, chat)
 	if err != nil {
-		logger.NewHelper(log).WithContext(ctx).Error("failed to start new chat", "error", err.Error())
+		logger.NewHelper(log).WithContext(ctx).Error("failed to start new chat", "chat_id", chat.ID, "error", err.Error())
 		return err
 	}
 	chat.Event.Raise(app.mediator)
@@ -40,15 +40,16 @@ func (app *Application) Prompt(ctx context.Context, log logger.Logger, f domain.
 	}
 
 	if err = chat.Prompt(q); err != nil {
-		helper.Error("failed to prompt", "error", err.Error())
+		helper.Error("failed to prompt", "chat_id", chat.ID, "error", err.Error())
 		return err
 	}
 
 	if err = app.repo.Save(ctx, chat); err != nil {
-		helper.Error("failet to save chat", "error", err.Error())
+		helper.Error("failet to save chat", "chat_id", chat.ID, "error", err.Error())
 		return err
 	}
 	chat.Event.Raise(app.mediator)
+	helper.Info("prompt", "chat_id", chat.ID)
 
 	go func(f domain.From, log logger.Logger) {
 		ctx, cancel := pkgCtx.GenContextWithTimeout(3 * time.Minute)
@@ -57,15 +58,15 @@ func (app *Application) Prompt(ctx context.Context, log logger.Logger, f domain.
 
 		chat, err := app.repo.Get(ctx, f)
 		if err != nil {
-			helper.Error("failed to get chat from repository to call chatgpt api", "error", err.Error())
+			helper.Error("failed to get chat from repository to call chatgpt api", "chat_id", chat.ID, "error", err.Error())
 			return
 		}
 		if _, err := app.api.Chat(ctx, chat); err != nil {
-			helper.Error("failed to get answer from chatgpt", "error", err.Error())
+			helper.Error("failed to get answer from chatgpt", "chat_id", chat.ID, "error", err.Error())
 			return
 		}
 		if err := app.repo.Save(ctx, chat); err != nil {
-			helper.Error("failed to save chat after get answer", "error", err.Error())
+			helper.Error("failed to save chat after get answer", "chat_id", chat.ID, "error", err.Error())
 			return
 		}
 		chat.Event.Raise(app.mediator)
