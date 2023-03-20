@@ -29,7 +29,7 @@ func (repo *repository) Get(ctx context.Context, from domain.From) (*domain.Chat
 		"SELECT c1.id 'c1.id', c1.counts 'c1.counts', c1.current_prompt 'c1.current_prompt', c1.channel 'c1.channel', c1.channel_user_id 'c1.channel_user_id',"+
 			" c1.channel_internal_id 'c1.channel_internal_id', c1.version 'c1.version', c1.ctime 'c1.ctime', c1.mtime 'c1.mtime', c1.deleted 'c1.deleted', "+
 			" c2.id 'c2.id', c2.chat_id 'c2.chat_id', c2.prompt 'c2.prompt', c2.answer 'c2.answer', c2.ctime 'c2.ctime', c2.mtime 'c2.mtime' "+
-			" FROM chat AS c1 LEFT JOIN conversation AS c2 ON c1.id=c2.chat_id AND c1.deleted=0 WHERE c1.channel=? AND c1.channel_user_id=? ORDER BY c2.id",
+			" FROM chat AS c1 LEFT JOIN conversation AS c2 ON c1.id=c2.chat_id WHERE c1.channel=? AND c1.channel_user_id=? AND c1.deleted=0 ORDER BY c2.id",
 		from.Channel, from.ChannelUserID,
 	)
 	if err != nil {
