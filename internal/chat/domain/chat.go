@@ -33,7 +33,7 @@ type (
 		Event         mediator.EventCollection
 		Current       *Conversation
 		Version       int
-		Offset        int
+		Counts        int
 		CreatedAt     time.Time
 	}
 )
@@ -71,7 +71,7 @@ func (c *Conversation) IsAnswed() bool {
 }
 
 func (c *Conversation) String() string {
-	return fmt.Sprintf("Prompt: %s\nAnswer: %s\n", c.Prompt, c.Answer)
+	return fmt.Sprintf("Prompt: %s\tAnswer: %s", c.Prompt, c.Answer)
 }
 
 func NewChat(f From) *Chat {
@@ -107,6 +107,7 @@ func (ct *Chat) Prompt(q string) error {
 		return errors.New("disallow empty prompt")
 	}
 	ct.Current = NewConversation(q)
+	ct.Counts++
 	ct.Event.Add(NewEventConversationCreated(ct.ID, ct.From, *ct.Current))
 	return nil
 }
@@ -133,6 +134,7 @@ func (ct *Chat) Reply(a string) (*Conversation, error) {
 func (ct *Chat) Interrupt(err error) (*Conversation, error) {
 	current := ct.Current
 	ct.Current = nil
+	ct.Counts--
 	ct.Event.Add(NewConversationInterrupted(ct.ID, ct.From, *current))
 	return current, err
 }
