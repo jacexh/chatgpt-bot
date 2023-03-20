@@ -46,7 +46,6 @@ const (
 
 const (
 	StatusReady Status = iota
-	StatusInProg
 	StatusEnded
 )
 
@@ -108,9 +107,6 @@ func (ct *Chat) Prompt(q string) error {
 		return errors.New("disallow empty prompt")
 	}
 	ct.Current = NewConversation(q)
-	if ct.Status == StatusReady {
-		ct.Status = StatusInProg
-	}
 	ct.Event.Add(NewEventConversationCreated(ct.ID, ct.From, *ct.Current))
 	return nil
 }
