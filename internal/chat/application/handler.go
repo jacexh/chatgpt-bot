@@ -58,7 +58,7 @@ func (ev *TelegramEventHandler) Handle(ctx context.Context, event mediator.Event
 	log := logger.With(ev.log, "chat_id", e.ChatID, "telegram_user_id", e.From.ChannelUserID, "telegram_internal_id", e.From.ChannelInternalID, "event_kind", event.Kind())
 	helper := logger.NewHelper(log)
 
-	chatID, msgID, err := ev.ParseIDs(e.From.ChannelInternalID)
+	chatID, _, err := ev.ParseIDs(e.From.ChannelInternalID)
 	if err != nil {
 		helper.Error("failed to parse internal id", "error", err.Error())
 		return
@@ -74,18 +74,16 @@ func (ev *TelegramEventHandler) Handle(ctx context.Context, event mediator.Event
 
 	case domain.KindConversationCreated:
 		chattable = tgbotapi.NewChatAction(chatID, tgbotapi.ChatTyping)
+		if _, err := ev.bot.Request(chattable); err != nil {
+			helper.Error("failed to set chat action", "error", err.Error())
+		}
+		return
 
 	case domain.KindConversationAnswered:
 		chattable = tgbotapi.NewMessage(chatID, e.Conversation.Answer)
-		mc := chattable.(tgbotapi.MessageConfig)
-		mc.ReplyToMessageID = msgID
-		chattable = mc
 
 	case domain.KindCoversationInterrupted:
 		chattable = tgbotapi.NewMessage(chatID, fmt.Sprintf("[ERR] this conversation was be interruptted, you can try again"))
-		mc := chattable.(tgbotapi.MessageConfig)
-		mc.ReplyToMessageID = msgID
-		chattable = mc
 	}
 
 	if chattable != nil {
