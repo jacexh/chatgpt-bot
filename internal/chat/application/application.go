@@ -16,6 +16,10 @@ type Application struct {
 	api      domain.ChatGTPService
 }
 
+func NewApplication(repo domain.Repository, mediator mediator.Mediator, api domain.ChatGTPService) *Application {
+	return &Application{repo: repo, mediator: mediator, api: api}
+}
+
 func (app *Application) NewChat(ctx context.Context, log logger.Logger, f domain.From) error {
 	chat := domain.NewChat(f)
 	err := app.repo.Save(ctx, chat)

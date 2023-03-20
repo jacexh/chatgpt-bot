@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-jimu/components/logger"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"github.com/jacexh/chatgpt-bot/internal/bootstrap/httpsrv"
 	"github.com/jacexh/chatgpt-bot/internal/chat/application"
 	"github.com/jacexh/chatgpt-bot/internal/chat/domain"
 )
@@ -14,6 +15,30 @@ import (
 type controller struct {
 	bot *tgbotapi.BotAPI
 	app *application.Application
+}
+
+var _ httpsrv.Controller = (*controller)(nil)
+
+func NewController(bot *tgbotapi.BotAPI, app *application.Application) httpsrv.Controller {
+	return &controller{bot: bot, app: app}
+}
+
+func (tg *controller) Slug() string {
+	return "/api/v1"
+}
+
+func (tg *controller) APIs() []httpsrv.API {
+	return []httpsrv.API{
+		{
+			Method:  http.MethodPost,
+			Pattern: "/telegram/callback",
+			Func:    tg.Handle,
+		},
+	}
+}
+
+func (tg *controller) Middlewares() []httpsrv.Middleware {
+	return []httpsrv.Middleware{}
 }
 
 func (tg *controller) Handle(w http.ResponseWriter, r *http.Request) {
