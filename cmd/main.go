@@ -51,7 +51,7 @@ func main() {
 	gpt := gpt.NewChatGPT(opt.ChatGPT)
 
 	// each business layer
-	chat.Init(db, cg, eb, bot, gpt)
+	chat.Init(log, db, cg, eb, bot, gpt)
 
 	// graceful shutdown
 	ctx, stop := signal.NotifyContext(context.RootContext(), syscall.SIGINT, syscall.SIGTERM, os.Interrupt)

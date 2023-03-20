@@ -72,6 +72,7 @@ func (tg *controller) Handle(w http.ResponseWriter, r *http.Request) {
 
 		case "/end":
 			tg.app.End(r.Context(), log, from)
+
 		default:
 			_ = tg.app.Prompt(r.Context(), log, from, update.Message.Text)
 		}
