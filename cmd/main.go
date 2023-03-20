@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-jimu/components/logger"
 	"github.com/go-jimu/components/mediator"
+	"github.com/jacexh/chatgpt-bot/internal/bootstrap/gpt"
 	"github.com/jacexh/chatgpt-bot/internal/bootstrap/httpsrv"
 	"github.com/jacexh/chatgpt-bot/internal/bootstrap/mysql"
 	"github.com/jacexh/chatgpt-bot/internal/bootstrap/telegram"
@@ -23,6 +24,7 @@ type Option struct {
 	MySQL      mysql.Option    `json:"mysql" toml:"mysql" yaml:"mysql"`
 	HTTPServer httpsrv.Option  `json:"http-server" toml:"http-server" yaml:"http-server"`
 	Telegram   telegram.Option `json:"telegram" yaml:"telegram"`
+	ChatGPT    gpt.Option      `json:"chatgpt" yaml:"chatgpt"`
 }
 
 func main() {
@@ -39,16 +41,17 @@ func main() {
 	context.New(opt.Context)
 
 	// eventbus layer
-	eb := mediator.NewInMemMediator(10)
+	eb := mediator.NewInMemMediator(1)
 	eventbus.SetDefault(eb)
 
 	// driver layer
 	db := mysql.NewMySQLDriver(opt.MySQL)
 	cg := httpsrv.NewHTTPServer(opt.HTTPServer, log)
 	bot := telegram.NewBotAPI(opt.Telegram, log)
+	gpt := gpt.NewChatGPT(opt.ChatGPT)
 
 	// each business layer
-	chat.Init(db, cg, eb, bot, nil)
+	chat.Init(db, cg, eb, bot, gpt)
 
 	// graceful shutdown
 	ctx, stop := signal.NotifyContext(context.RootContext(), syscall.SIGINT, syscall.SIGTERM, os.Interrupt)

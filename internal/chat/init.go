@@ -8,12 +8,13 @@ import (
 	"github.com/jacexh/chatgpt-bot/internal/chat/application/transport"
 	"github.com/jacexh/chatgpt-bot/internal/chat/infrastructure"
 	"github.com/jmoiron/sqlx"
+	"github.com/sashabaranov/go-openai"
 )
 
-func Init(db *sqlx.DB, http httpsrv.HTTPServer, mediator mediator.Mediator, bot *tgbotapi.BotAPI, opt infrastructure.ChatGPTOption) {
+func Init(db *sqlx.DB, http httpsrv.HTTPServer, mediator mediator.Mediator, bot *tgbotapi.BotAPI, gpt *openai.Client) {
 	repo := infrastructure.NewRepository(db)
-	gpt := infrastructure.NewChatGTPServer(opt)
-	app := application.NewApplication(repo, mediator, gpt)
+	gptSrv := infrastructure.NewChatGTPServer(gpt)
+	app := application.NewApplication(repo, mediator, gptSrv)
 	controller := transport.NewController(bot, app)
 	http.With(controller)
 }
