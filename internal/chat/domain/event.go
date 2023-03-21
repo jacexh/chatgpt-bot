@@ -7,6 +7,7 @@ type MetaEvent struct {
 	From         From
 	Conversation Conversation
 	kind         mediator.EventKind
+	Error        error
 }
 
 type Event interface {
@@ -52,8 +53,14 @@ func NewEventPromptAnswerd(cid string, f From, c Conversation) Event {
 	return NewEvent(cid, f, c, KindConversationAnswered)
 }
 
-func NewConversationInterrupted(cid string, f From, c Conversation) Event {
-	return NewEvent(cid, f, c, KindCoversationInterrupted)
+func NewConversationInterrupted(cid string, f From, c Conversation, err error) Event {
+	return &MetaEvent{
+		ChatID:       cid,
+		From:         f,
+		Conversation: c,
+		kind:         KindCoversationInterrupted,
+		Error:        err,
+	}
 }
 
 func NewEventChatShutdown(cid string, f From, c Conversation) Event {

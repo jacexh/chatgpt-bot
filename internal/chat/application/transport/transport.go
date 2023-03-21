@@ -73,6 +73,21 @@ func (tg *controller) Handle(w http.ResponseWriter, r *http.Request) {
 		case "/end":
 			tg.app.End(r.Context(), log, from)
 
+		case "/current":
+			details, err := tg.app.Get(r.Context(), log, from)
+			var text string
+			if err != nil {
+				text = err.Error()
+			} else {
+				data, _ := json.Marshal(details)
+				text = string(data)
+			}
+			msg := tgbotapi.NewMessage(update.Message.Chat.ID, text)
+			if _, err = tg.bot.Send(msg); err != nil {
+				logger.NewHelper(log).WithContext(r.Context()).Error("failed to send chat details", "error", err.Error())
+			}
+			return
+
 		default:
 			_ = tg.app.Prompt(r.Context(), log, from, update.Message.Text)
 		}

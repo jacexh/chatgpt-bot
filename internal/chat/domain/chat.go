@@ -135,7 +135,7 @@ func (ct *Chat) Interrupt(err error) (*Conversation, error) {
 	current := ct.Current
 	ct.Current = nil
 	ct.Counts--
-	ct.Event.Add(NewConversationInterrupted(ct.ID, ct.From, *current))
+	ct.Event.Add(NewConversationInterrupted(ct.ID, ct.From, *current, err))
 	return current, err
 }
 
