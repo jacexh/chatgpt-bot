@@ -44,7 +44,7 @@ func (app *Application) Get(ctx context.Context, log logger.Logger, f domain.Fro
 		return nil, err
 	}
 	helper.Info("fetched chat details")
-	return assembleEntidy(chat), nil
+	return AssembleEntidy(chat), nil
 }
 
 func (app *Application) Prompt(ctx context.Context, log logger.Logger, f domain.From, q string) error {
