@@ -67,10 +67,10 @@ func (ev *TelegramEventHandler) Handle(ctx context.Context, event mediator.Event
 	var chattable tgbotapi.Chattable
 	switch e.Kind() {
 	case domain.KindChatStartted:
-		chattable = tgbotapi.NewMessage(chatID, fmt.Sprintf("[%s] 已经开启新的会话", e.ChatID))
+		chattable = tgbotapi.NewMessage(chatID, "已经开启新的会话")
 
 	case domain.KindChatFinished, domain.KindChatShutdown:
-		chattable = tgbotapi.NewMessage(chatID, fmt.Sprintf("[%s] 当前会话已经结束", e.ChatID))
+		chattable = tgbotapi.NewMessage(chatID, "当前会话已经结束")
 
 	case domain.KindConversationCreated:
 		chattable = tgbotapi.NewChatAction(chatID, tgbotapi.ChatTyping)
@@ -83,7 +83,7 @@ func (ev *TelegramEventHandler) Handle(ctx context.Context, event mediator.Event
 		chattable = tgbotapi.NewMessage(chatID, e.Conversation.Answer)
 
 	case domain.KindCoversationInterrupted:
-		chattable = tgbotapi.NewMessage(chatID, fmt.Sprintf("[ERR] this conversation was be interruptted, you can try again"))
+		chattable = tgbotapi.NewMessage(chatID, fmt.Sprintf("[ERR] %s", e.Error.Error()))
 	}
 
 	if chattable != nil {

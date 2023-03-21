@@ -2,6 +2,8 @@ package application
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"time"
 
 	"github.com/go-jimu/components/logger"
@@ -29,6 +31,20 @@ func (app *Application) NewChat(ctx context.Context, log logger.Logger, f domain
 	}
 	chat.Event.Raise(app.mediator)
 	return nil
+}
+
+func (app *Application) Get(ctx context.Context, log logger.Logger, f domain.From) (*Chat, error) {
+	helper := logger.NewHelper(log).WithContext(ctx)
+	chat, err := app.repo.Get(ctx, f)
+	if err != nil {
+		helper.Error("failed to get chat", "error", err.Error())
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, errors.New("没有进行中的会话")
+		}
+		return nil, err
+	}
+	helper.Info("fetched chat details")
+	return assembleEntidy(chat), nil
 }
 
 func (app *Application) Prompt(ctx context.Context, log logger.Logger, f domain.From, q string) error {
