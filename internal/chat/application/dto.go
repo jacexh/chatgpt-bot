@@ -4,7 +4,7 @@ import "github.com/jacexh/chatgpt-bot/internal/chat/domain"
 
 type Converstaion struct {
 	Prompt string `json:"prompt"`
-	Answer string `json:"prompt"`
+	Answer string `json:"answer"`
 }
 
 type Chat struct {
@@ -15,7 +15,7 @@ type Chat struct {
 	Previous      []*Converstaion `json:"previous,omitempty"`
 }
 
-func assembleEntidy(entity *domain.Chat) *Chat {
+func AssembleEntidy(entity *domain.Chat) *Chat {
 	c := &Chat{ID: entity.ID, Channel: int(entity.From.Channel), ChannelUserID: entity.From.ChannelUserID, Previous: make([]*Converstaion, len(entity.PreviousConversations()))}
 	if cov, err := entity.CurrentConversation(); err == nil {
 		c.Current = &Converstaion{Prompt: cov.Prompt}
