@@ -66,9 +66,13 @@ func (tg *controller) Handle(w http.ResponseWriter, r *http.Request) {
 	)
 
 	if update.Message != nil {
+		var chattable tgbotapi.Chattable
+
 		switch update.Message.Text {
 		case "/start":
-			_ = tg.app.NewChat(r.Context(), log, from)
+			if err = tg.app.NewChat(r.Context(), log, from); err != nil {
+				chattable = tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprintf("[ERR] %s", err.Error()))
+			}
 
 		case "/end":
 			tg.app.End(r.Context(), log, from)
@@ -82,14 +86,18 @@ func (tg *controller) Handle(w http.ResponseWriter, r *http.Request) {
 				data, _ := json.Marshal(details)
 				text = string(data)
 			}
-			msg := tgbotapi.NewMessage(update.Message.Chat.ID, text)
-			if _, err = tg.bot.Send(msg); err != nil {
-				logger.NewHelper(log).WithContext(r.Context()).Error("failed to send chat details", "error", err.Error())
-			}
-			return
+			chattable = tgbotapi.NewMessage(update.Message.Chat.ID, text)
 
 		default:
-			_ = tg.app.Prompt(r.Context(), log, from, update.Message.Text)
+			if err = tg.app.Prompt(r.Context(), log, from, update.Message.Text); err != nil {
+				chattable = tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprintf("[ERR] %s", err.Error()))
+			}
+		}
+
+		if chattable != nil {
+			if _, err = tg.bot.Send(chattable); err != nil {
+				logger.NewHelper(log).WithContext(r.Context()).Error("failed to send chat details", "error", err.Error())
+			}
 		}
 	}
 }
