@@ -47,6 +47,34 @@ func (repo *repository) Get(ctx context.Context, from domain.From) (*domain.Chat
 	return ConverDO(data[0].Chat, convs...)
 }
 
+func (repo *repository) GetByChatID(ctx context.Context, cid string) (*domain.Chat, error) {
+	type record struct {
+		*Chat         `db:"c1"`
+		*Conversation `db:"c2"`
+	}
+	var data []record
+	err := repo.db.SelectContext(ctx, &data,
+		"SELECT c1.id 'c1.id', c1.counts 'c1.counts', c1.current 'c1.current', c1.channel 'c1.channel', c1.channel_user_id 'c1.channel_user_id',"+
+			" c1.version 'c1.version', c1.ctime 'c1.ctime', c1.mtime 'c1.mtime', c1.deleted 'c1.deleted', c2.id 'c2.id', c2.chat_id 'c2.chat_id', "+
+			" c2.prompt 'c2.prompt', c2.completion 'c2.completion', c2.channel_message_id 'c2.channel_message_id', c2.ctime 'c2.ctime', c2.mtime 'c2.mtime' "+
+			" FROM chat AS c1 LEFT JOIN conversation AS c2 ON c1.id=c2.chat_id WHERE c1.id=? ORDER BY c2.id",
+		cid,
+	)
+	if err != nil {
+		return nil, err
+	}
+	if len(data) == 0 {
+		return nil, sql.ErrNoRows
+	}
+	convs := make([]*Conversation, 0)
+	for _, rec := range data {
+		if rec.Conversation.ID.Valid {
+			convs = append(convs, rec.Conversation)
+		}
+	}
+	return ConverDO(data[0].Chat, convs...)
+}
+
 func (repo *repository) Save(ctx context.Context, chat *domain.Chat) error {
 	if chat.Version == 0 { // 新增
 		tx, err := repo.db.BeginTxx(ctx, &sql.TxOptions{Isolation: sql.LevelRepeatableRead})

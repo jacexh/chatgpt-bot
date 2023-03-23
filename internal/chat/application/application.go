@@ -47,6 +47,17 @@ func (app *Application) Get(ctx context.Context, log logger.Logger, f domain.Fro
 	return AssembleEntidy(chat), nil
 }
 
+func (app *Application) GetByChatID(ctx context.Context, log logger.Logger, cid string) (*Chat, error) {
+	helper := logger.NewHelper(log).WithContext(ctx)
+	chat, err := app.repo.GetByChatID(ctx, cid)
+	if err != nil {
+		helper.Error("failed to get chat by id", "error", err.Error())
+		return nil, err
+	}
+	helper.Info("fetched chat details")
+	return AssembleEntidy(chat), nil
+}
+
 func (app *Application) Prompt(ctx context.Context, log logger.Logger, f domain.From, q string, msgID domain.ChannelMessageID) error {
 	helper := logger.NewHelper(log).WithContext(ctx)
 	chat, err := app.repo.Get(ctx, f)

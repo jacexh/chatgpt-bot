@@ -1,10 +1,13 @@
 package transport
 
 import (
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/go-jimu/components/logger"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/jacexh/chatgpt-bot/internal/bootstrap/httpsrv"
@@ -32,7 +35,12 @@ func (tg *controller) APIs() []httpsrv.API {
 		{
 			Method:  http.MethodPost,
 			Pattern: "/telegram/callback",
-			Func:    tg.Handle,
+			Func:    tg.Webhook,
+		},
+		{
+			Method:  http.MethodGet,
+			Pattern: "/chats/{chatID}",
+			Func:    tg.Query,
 		},
 	}
 }
@@ -41,7 +49,25 @@ func (tg *controller) Middlewares() []httpsrv.Middleware {
 	return []httpsrv.Middleware{}
 }
 
-func (tg *controller) Handle(w http.ResponseWriter, r *http.Request) {
+func (tg *controller) Query(w http.ResponseWriter, r *http.Request) {
+	chatID := chi.URLParam(r, "chatID")
+	dto, err := tg.app.GetByChatID(r.Context(), logger.FromContext(r.Context()), chatID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	data, _ := json.Marshal(dto)
+	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte(data))
+}
+
+func (tg *controller) Webhook(w http.ResponseWriter, r *http.Request) {
 	helper := logger.FromContextAsHelper(r.Context()).WithContext(r.Context())
 	update, err := tg.bot.HandleUpdate(r)
 	if err != nil {
