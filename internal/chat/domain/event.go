@@ -42,12 +42,12 @@ func NewEventConversationCreated(cid string, f From, c Conversation) Event {
 	return NewEvent(cid, f, c, KindConversationCreated)
 }
 
-func NewEventPromptAnswerd(cid string, f From, c Conversation) Event {
+func NewEventPromptReplied(cid string, f From, c Conversation) Event {
 	return NewEvent(cid, f, c, KindConversationReplied)
 }
 
 func NewConversationInterrupted(cid string, f From, c Conversation, err error) Event {
-	return &MetaEvent{
+	return MetaEvent{
 		ChatID:       cid,
 		From:         f,
 		Conversation: c,

@@ -35,12 +35,12 @@ func (ev *TelegramEventHandler) Handle(ctx context.Context, event mediator.Event
 		return
 	}
 
-	log := logger.With(ev.log, "chat_id", e.ChatID, "telegram_user_id", e.From.ChannelUserID, "event_kind", event.Kind())
+	log := logger.With(ev.log, "chat_id", e.ChatID, "telegram_user_id", e.From.ChannelUserID, "message_id", e.Conversation.MessageID, "event_kind", event.Kind())
 	helper := logger.NewHelper(log)
 
 	slices := strings.Split(string(e.Conversation.MessageID), "@")
 	if len(slices) != 2 {
-		helper.Error("failed to parse telegram chat/message id from converstaion", "converstaion_message_id", e.Conversation.MessageID)
+		helper.Error("failed to parse telegram chat/message id from converstaion")
 		return
 	}
 	msgID, err := strconv.ParseInt(slices[0], 10, 0)
@@ -75,6 +75,7 @@ func (ev *TelegramEventHandler) Handle(ctx context.Context, event mediator.Event
 		msg := chattable.(tgbotapi.MessageConfig)
 		msg.ReplyToMessageID = int(msgID)
 		chattable = msg
+		helper.Error("current conversation was interrupted", "error", e.Error.Error())
 	}
 
 	if chattable != nil {

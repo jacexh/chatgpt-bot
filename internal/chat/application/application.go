@@ -47,6 +47,17 @@ func (app *Application) Get(ctx context.Context, log logger.Logger, f domain.Fro
 	return AssembleEntidy(chat), nil
 }
 
+func (app *Application) GetByChatID(ctx context.Context, log logger.Logger, cid string) (*Chat, error) {
+	helper := logger.NewHelper(log).WithContext(ctx)
+	chat, err := app.repo.GetByChatID(ctx, cid)
+	if err != nil {
+		helper.Error("failed to get chat by id", "error", err.Error())
+		return nil, err
+	}
+	helper.Info("fetched chat details")
+	return AssembleEntidy(chat), nil
+}
+
 func (app *Application) Prompt(ctx context.Context, log logger.Logger, f domain.From, q string, msgID domain.ChannelMessageID) error {
 	helper := logger.NewHelper(log).WithContext(ctx)
 	chat, err := app.repo.Get(ctx, f)
@@ -79,13 +90,14 @@ func (app *Application) Prompt(ctx context.Context, log logger.Logger, f domain.
 		}
 		conv, err := app.api.Chat(ctx, chat)
 		if err != nil {
-			helper.Error("failed to get answer from chatgpt", "chat_id", chat.ID, "error", err.Error())
-			return
+			helper.Error("failed to get completion from chatgpt", "chat_id", chat.ID, "error", err.Error())
+		} else {
+			helper.Info("got completion", "chat_id", chat.ID, "completion", conv.Completion)
 		}
-		helper.Info("got answer", "chat_id", chat.ID, "answer", conv.Completion)
 
-		if err := app.repo.Save(ctx, chat); err != nil {
-			helper.Error("failed to save chat after get answer", "chat_id", chat.ID, "error", err.Error())
+		// 如果context.Context超时，这边必定报错
+		if err := app.repo.Save(context.Background(), chat); err != nil {
+			helper.Error("failed to save chat", "chat_id", chat.ID, "error", err.Error())
 			return
 		}
 		chat.Event.Raise(app.mediator)
