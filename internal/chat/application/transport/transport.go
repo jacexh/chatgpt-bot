@@ -88,8 +88,8 @@ func (tg *controller) Handle(w http.ResponseWriter, r *http.Request) {
 			chattable = tgbotapi.NewMessage(update.Message.Chat.ID, text)
 
 		default:
-			msgID := domain.ChannelMessageID(fmt.Sprintf("%d", update.Message.MessageID))
-			if err = tg.app.Prompt(r.Context(), log, from, update.Message.Text, msgID); err != nil {
+			msgID := fmt.Sprintf("%d@%d", update.Message.MessageID, update.Message.Chat.ID)
+			if err = tg.app.Prompt(r.Context(), log, from, update.Message.Text, domain.ChannelMessageID(msgID)); err != nil {
 				chattable = tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprintf("[ERR] %s", err.Error()))
 			}
 		}

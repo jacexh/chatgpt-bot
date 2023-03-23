@@ -21,15 +21,15 @@ type (
 	}
 
 	Chat struct {
-		ID            string         `db:"id"`
-		Counts        int            `db:"counts"`
-		Current       sql.NullString `db:"current"`
-		Channel       int            `db:"channel"`
-		ChannelUserID string         `db:"channel_user_id"`
-		Version       int            `db:"version"`
-		CTime         time.Time      `db:"ctime"`
-		MTime         time.Time      `db:"mtime"`
-		Deleted       int            `db:"deleted"`
+		ID            string    `db:"id"`
+		Counts        int       `db:"counts"`
+		Current       string    `db:"current"`
+		Channel       int       `db:"channel"`
+		ChannelUserID string    `db:"channel_user_id"`
+		Version       int       `db:"version"`
+		CTime         time.Time `db:"ctime"`
+		MTime         time.Time `db:"mtime"`
+		Deleted       int       `db:"deleted"`
 	}
 )
 
@@ -44,9 +44,9 @@ func ConverDO(ch *Chat, cs ...*Conversation) (*domain.Chat, error) {
 		CreatedAt:     ch.CTime,
 		Event:         mediator.NewEventCollection(),
 	}
-	if ch.Current.Valid && ch.Current.String != "" {
+	if ch.Current != "" && ch.Current != "{}" {
 		cu := new(domain.Conversation)
-		if err := json.Unmarshal([]byte(ch.Current.String), cu); err != nil {
+		if err := json.Unmarshal([]byte(ch.Current), cu); err != nil {
 			return nil, err
 		}
 		c.Current = cu
@@ -79,7 +79,7 @@ func ConvertEntityChat(entity *domain.Chat) (*Chat, error) {
 
 		str := string(data)
 		if str != "" && str != "{}" {
-			c.Current = sql.NullString{String: str, Valid: true}
+			c.Current = str
 		}
 	}
 	return c, nil

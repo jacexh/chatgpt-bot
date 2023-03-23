@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/go-jimu/components/logger"
 	"github.com/go-jimu/components/mediator"
@@ -40,14 +41,20 @@ func (ev *TelegramEventHandler) Handle(ctx context.Context, event mediator.Event
 	log := logger.With(ev.log, "chat_id", e.ChatID, "telegram_user_id", e.From.ChannelUserID, "event_kind", event.Kind())
 	helper := logger.NewHelper(log)
 
-	chatID, err := strconv.ParseInt(e.ChatID, 10, 0)
-	if err != nil {
-		helper.Error("failed to parse chat id", "error", err.Error())
+	slices := strings.Split(string(e.Conversation.MessageID), "@")
+	if len(slices) != 2 {
+		helper.Error("failed to parse telegram chat/message id from converstaion", "converstaion_message_id", e.Conversation.MessageID)
 		return
 	}
-	msgID, err := strconv.ParseInt(string(e.Conversation.MessageID), 10, 0)
+	msgID, err := strconv.ParseInt(slices[0], 10, 0)
 	if err != nil {
 		helper.Error("failed to parse message id", "error", err.Error())
+		return
+	}
+
+	chatID, err := strconv.ParseInt(slices[1], 10, 0)
+	if err != nil {
+		helper.Error("failed to parse chat id", "error", err.Error())
 		return
 	}
 
