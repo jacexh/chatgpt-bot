@@ -62,8 +62,8 @@ func (tg *controller) Query(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data, _ := json.Marshal(dto)
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
-	w.Header().Set("Content-Type", "application/json")
 	w.Write([]byte(data))
 }
 
