@@ -1,10 +1,9 @@
 CREATE TABLE `chat` (
   `id` varchar(32) NOT NULL,
   `counts` tinyint NOT NULL DEFAULT '0',
-  `current_prompt` text NOT NULL,
+  `current` text NOT NULL,
   `channel` tinyint NOT NULL,
   `channel_user_id` varchar(45) NOT NULL,
-  `channel_internal_id` varchar(128) NOT NULL,
   `version` int NOT NULL DEFAULT '0',
   `ctime` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `mtime` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -18,8 +17,9 @@ CREATE TABLE `conversation` (
   `id` int NOT NULL AUTO_INCREMENT,
   `chat_id` varchar(32) DEFAULT NULL,
   `prompt` text NOT NULL,
-  `answer` text,
+  `completion` text,
+  `channel_message_id` varchar(48) NOT NULL,
   `ctime` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `mtime` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;

@@ -26,9 +26,9 @@ func (repo *repository) Get(ctx context.Context, from domain.From) (*domain.Chat
 	}
 	var data []record
 	err := repo.db.SelectContext(ctx, &data,
-		"SELECT c1.id 'c1.id', c1.counts 'c1.counts', c1.current_prompt 'c1.current_prompt', c1.channel 'c1.channel', c1.channel_user_id 'c1.channel_user_id',"+
-			" c1.channel_internal_id 'c1.channel_internal_id', c1.version 'c1.version', c1.ctime 'c1.ctime', c1.mtime 'c1.mtime', c1.deleted 'c1.deleted', "+
-			" c2.id 'c2.id', c2.chat_id 'c2.chat_id', c2.prompt 'c2.prompt', c2.answer 'c2.answer', c2.ctime 'c2.ctime', c2.mtime 'c2.mtime' "+
+		"SELECT c1.id 'c1.id', c1.counts 'c1.counts', c1.current 'c1.current', c1.channel 'c1.channel', c1.channel_user_id 'c1.channel_user_id',"+
+			" c1.version 'c1.version', c1.ctime 'c1.ctime', c1.mtime 'c1.mtime', c1.deleted 'c1.deleted', c2.id 'c2.id', c2.chat_id 'c2.chat_id', "+
+			" c2.prompt 'c2.prompt', c2.completion 'c2.completion', c2.channel_message_id 'c2.channel_message_id', c2.ctime 'c2.ctime', c2.mtime 'c2.mtime' "+
 			" FROM chat AS c1 LEFT JOIN conversation AS c2 ON c1.id=c2.chat_id WHERE c1.channel=? AND c1.channel_user_id=? AND c1.deleted=0 ORDER BY c2.id",
 		from.Channel, from.ChannelUserID,
 	)
@@ -44,7 +44,7 @@ func (repo *repository) Get(ctx context.Context, from domain.From) (*domain.Chat
 			convs = append(convs, rec.Conversation)
 		}
 	}
-	return ConverDO(data[0].Chat, convs...), nil
+	return ConverDO(data[0].Chat, convs...)
 }
 
 func (repo *repository) Save(ctx context.Context, chat *domain.Chat) error {
@@ -54,10 +54,14 @@ func (repo *repository) Save(ctx context.Context, chat *domain.Chat) error {
 			return err
 		}
 
-		ret, err := tx.NamedExec("INSERT INTO chat (id, counts, current_prompt, channel, channel_user_id, channel_internal_id, version)  SELECT * FROM ( "+
-			"SELECT :id as id, :counts as counts, :current_prompt as current_prompt, :channel as channel, :channel_user_id as channel_user_id, :channel_internal_id as channel_internal_id, 1 as version) AS tmp "+
+		do, err := ConvertEntityChat(chat)
+		if err != nil {
+			return err
+		}
+		ret, err := tx.NamedExec("INSERT INTO chat (id, counts, current, channel, channel_user_id, version)  SELECT * FROM ( "+
+			"SELECT :id as id, :counts as counts, :current as current, :channel as channel, :channel_user_id as channel_user_id, 1 as version) AS tmp "+
 			"WHERE NOT EXISTS(SELECT * FROM chat WHERE id<>:id AND channel_user_id=:channel_user_id AND channel=:channel AND deleted=0 LIMIT 1)",
-			ConvertEntityChat(chat),
+			do,
 		)
 		if err != nil {
 			_ = tx.Rollback()
@@ -80,22 +84,25 @@ func (repo *repository) Save(ctx context.Context, chat *domain.Chat) error {
 	}
 
 	// 更新记录
-	do := ConvertEntityChat(chat)
+	do, err := ConvertEntityChat(chat)
+	if err != nil {
+		return err
+	}
 	tx, err := repo.db.BeginTxx(ctx, &sql.TxOptions{Isolation: sql.LevelRepeatableRead})
 	if err != nil {
 		return err
 	}
 
-	_, err = tx.Exec("UPDATE chat SET counts=?, current_prompt=?, version=version+1, deleted=? WHERE id=? AND deleted=0", do.Counts, do.CurrentPrompt, do.Deleted, do.ID)
+	_, err = tx.Exec("UPDATE chat SET counts=?, current=?, version=version+1, deleted=? WHERE id=? AND deleted=0", do.Counts, do.Current, do.Deleted, do.ID)
 	if err != nil {
 		_ = tx.Rollback()
 		return err
 	}
 	if chat.Current == nil && len(chat.Conversations) > 0 { // conversation完成，则insert最后一条
 		lastConversation := chat.Conversations[len(chat.Conversations)-1]
-		_, err = tx.Exec("INSERT INTO conversation (chat_id, prompt, answer) SELECT * FROM "+
-			"(SELECT ? AS chat_id, ? AS prompt, ? AS answer) AS tmp WHERE (SELECT COUNT(id) FROM conversation WHERE chat_id=?) < ?",
-			do.ID, lastConversation.Prompt, lastConversation.Answer, do.ID, len(chat.Conversations))
+		_, err = tx.Exec("INSERT INTO conversation (chat_id, prompt, completion, channel_message_id) SELECT * FROM "+
+			"(SELECT ? AS chat_id, ? AS prompt, ? AS completion, ? AS channel_message_id) AS tmp WHERE (SELECT COUNT(id) FROM conversation WHERE chat_id=?) < ?",
+			do.ID, lastConversation.Prompt, lastConversation.Completion, lastConversation.MessageID, do.ID, len(chat.Conversations))
 		if err != nil {
 			_ = tx.Rollback()
 			return err

@@ -11,17 +11,24 @@ import (
 
 type (
 	Conversation struct {
-		Prompt string
-		Answer string
+		MessageID  ChannelMessageID `json:"message_id,omitempty"`
+		Prompt     string           `json:"prompt,omitempty"`
+		Completion string           `json:"completion,omitempty"`
 	}
 
 	From struct {
-		ChannelUserID     string
-		Channel           Channel
-		ChannelInternalID string
+		ChannelUserID ChannelUserID
+		Channel       Channel
 	}
 
+	// Channel 通道类型枚举值
 	Channel int
+
+	// ChannelMessageID 通道内部消息ID
+	ChannelMessageID string
+
+	// ChannelUserID 通道的用户ID
+	ChannelUserID string
 
 	Status int
 
@@ -58,20 +65,20 @@ var (
 	emptyConversation = Conversation{}
 )
 
-func NewConversation(prompt string) *Conversation {
-	return &Conversation{Prompt: prompt}
+func NewConversation(prompt string, msgID ChannelMessageID) *Conversation {
+	return &Conversation{Prompt: prompt, MessageID: msgID}
 }
 
-func (c *Conversation) Reply(answer string) {
-	c.Answer = answer
+func (c *Conversation) Reply(completion string) {
+	c.Completion = completion
 }
 
-func (c *Conversation) IsAnswed() bool {
-	return c.Answer != ""
+func (c *Conversation) IsReplied() bool {
+	return c.Completion != ""
 }
 
 func (c *Conversation) String() string {
-	return fmt.Sprintf("Prompt: %s\tAnswer: %s", c.Prompt, c.Answer)
+	return fmt.Sprintf("Prompt: %s\tCompletion: %s", c.Prompt, c.Completion)
 }
 
 func NewChat(f From) *Chat {
@@ -84,7 +91,6 @@ func NewChat(f From) *Chat {
 		Version:       0,
 		CreatedAt:     time.Now(),
 	}
-	ct.Event.Add(NewEventChatStartted(ct.ID, f, Conversation{}))
 	return ct
 }
 
@@ -99,14 +105,14 @@ func (ct *Chat) CurrentConversation() (*Conversation, error) {
 	return ct.Current, nil
 }
 
-func (ct *Chat) Prompt(q string) error {
+func (ct *Chat) Prompt(q string, msgID ChannelMessageID) error {
 	if ct.Current != nil {
 		return errors.New("the previouse conversation has not yet ended")
 	}
 	if q == "" {
 		return errors.New("disallow empty prompt")
 	}
-	ct.Current = NewConversation(q)
+	ct.Current = NewConversation(q, msgID)
 	ct.Counts++
 	ct.Event.Add(NewEventConversationCreated(ct.ID, ct.From, *ct.Current))
 	return nil
@@ -120,8 +126,8 @@ func (ct *Chat) Reply(a string) (*Conversation, error) {
 	if a == "" {
 		return nil, errors.New("disallow empty string")
 	}
-	if ct.Current.IsAnswed() {
-		return ct.Current, errors.New("current prompt has already been answered")
+	if ct.Current.IsReplied() {
+		return ct.Current, errors.New("current prompt has already been replied")
 	}
 	ct.Current.Reply(a)
 	ct.Conversations = append(ct.Conversations, ct.Current)
@@ -142,7 +148,6 @@ func (ct *Chat) Interrupt(err error) (*Conversation, error) {
 func (ct *Chat) Shutdown() {
 	if ct.Status != StatusEnded {
 		ct.Status = StatusEnded
-		ct.Event.Add(NewEventChatShutdown(ct.ID, ct.From, emptyConversation))
 		if ct.Current != nil {
 			ct.Interrupt(errors.New("shutdown"))
 		}
@@ -158,7 +163,6 @@ func (ct *Chat) IsFinished() bool {
 	}
 	if time.Since(ct.CreatedAt) >= ChatExpirationTime || len(ct.Conversations) >= MaxConversationCounts {
 		ct.Status = StatusEnded
-		ct.Event.Add(NewEventChatFinished(ct.ID, ct.From, emptyConversation))
 		return true
 	}
 	return false

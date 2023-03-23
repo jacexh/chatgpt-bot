@@ -3,8 +3,8 @@ package application
 import "github.com/jacexh/chatgpt-bot/internal/chat/domain"
 
 type Converstaion struct {
-	Prompt string `json:"prompt"`
-	Answer string `json:"answer"`
+	Prompt     string `json:"prompt"`
+	Completion string `json:"completion"`
 }
 
 type Chat struct {
@@ -16,14 +16,19 @@ type Chat struct {
 }
 
 func AssembleEntidy(entity *domain.Chat) *Chat {
-	c := &Chat{ID: entity.ID, Channel: int(entity.From.Channel), ChannelUserID: entity.From.ChannelUserID, Previous: make([]*Converstaion, len(entity.PreviousConversations()))}
+	c := &Chat{
+		ID:            entity.ID,
+		Channel:       int(entity.From.Channel),
+		ChannelUserID: string(entity.From.ChannelUserID),
+		Previous:      make([]*Converstaion, len(entity.PreviousConversations())),
+	}
 	if cov, err := entity.CurrentConversation(); err == nil {
 		c.Current = &Converstaion{Prompt: cov.Prompt}
 	}
 	for index, conv := range entity.PreviousConversations() {
 		c.Previous[index] = &Converstaion{
-			Prompt: conv.Prompt,
-			Answer: conv.Answer,
+			Prompt:     conv.Prompt,
+			Completion: conv.Completion,
 		}
 	}
 	return c

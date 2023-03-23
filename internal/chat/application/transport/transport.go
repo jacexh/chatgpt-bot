@@ -54,9 +54,8 @@ func (tg *controller) Handle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	from := domain.From{
-		Channel:           domain.ChannelTelegram,
-		ChannelUserID:     fmt.Sprintf("%d", update.Message.From.ID),
-		ChannelInternalID: fmt.Sprintf("%d+%d", update.Message.Chat.ID, update.Message.MessageID),
+		Channel:       domain.ChannelTelegram,
+		ChannelUserID: domain.ChannelUserID(fmt.Sprintf("%d", update.Message.From.ID)),
 	}
 
 	log := logger.With(helper,
@@ -72,10 +71,13 @@ func (tg *controller) Handle(w http.ResponseWriter, r *http.Request) {
 		case "/start":
 			if err = tg.app.NewChat(r.Context(), log, from); err != nil {
 				chattable = tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprintf("[ERR] %s", err.Error()))
+			} else {
+				chattable = tgbotapi.NewMessage(update.Message.Chat.ID, "开始新的会话")
 			}
 
 		case "/end":
 			tg.app.End(r.Context(), log, from)
+			chattable = tgbotapi.NewMessage(update.Message.Chat.ID, "原会话已经结束")
 
 		case "/current":
 			details, err := tg.app.Get(r.Context(), log, from)
@@ -89,15 +91,18 @@ func (tg *controller) Handle(w http.ResponseWriter, r *http.Request) {
 			chattable = tgbotapi.NewMessage(update.Message.Chat.ID, text)
 
 		default:
-			if err = tg.app.Prompt(r.Context(), log, from, update.Message.Text); err != nil {
+			msgID := fmt.Sprintf("%d@%d", update.Message.MessageID, update.Message.Chat.ID)
+			if err = tg.app.Prompt(r.Context(), log, from, update.Message.Text, domain.ChannelMessageID(msgID)); err != nil {
 				chattable = tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprintf("[ERR] %s", err.Error()))
 			}
 		}
 
-		if chattable != nil {
-			if _, err = tg.bot.Send(chattable); err != nil {
-				logger.NewHelper(log).WithContext(r.Context()).Error("failed to send chat details", "error", err.Error())
+		go func(msg tgbotapi.Chattable, log logger.Logger) {
+			if msg != nil {
+				if _, err = tg.bot.Send(msg); err != nil {
+					logger.NewHelper(log).WithContext(r.Context()).Error("failed to send chat details", "error", err.Error())
+				}
 			}
-		}
+		}(chattable, helper)
 	}
 }

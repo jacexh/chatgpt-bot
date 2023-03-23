@@ -47,7 +47,7 @@ func (app *Application) Get(ctx context.Context, log logger.Logger, f domain.Fro
 	return AssembleEntidy(chat), nil
 }
 
-func (app *Application) Prompt(ctx context.Context, log logger.Logger, f domain.From, q string) error {
+func (app *Application) Prompt(ctx context.Context, log logger.Logger, f domain.From, q string, msgID domain.ChannelMessageID) error {
 	helper := logger.NewHelper(log).WithContext(ctx)
 	chat, err := app.repo.Get(ctx, f)
 	if err != nil {
@@ -55,7 +55,7 @@ func (app *Application) Prompt(ctx context.Context, log logger.Logger, f domain.
 		return err
 	}
 
-	if err = chat.Prompt(q); err != nil {
+	if err = chat.Prompt(q, msgID); err != nil {
 		helper.Error("failed to prompt", "chat_id", chat.ID, "error", err.Error())
 		return err
 	}
@@ -82,7 +82,7 @@ func (app *Application) Prompt(ctx context.Context, log logger.Logger, f domain.
 			helper.Error("failed to get answer from chatgpt", "chat_id", chat.ID, "error", err.Error())
 			return
 		}
-		helper.Info("got answer", "chat_id", chat.ID, "answer", conv.Answer)
+		helper.Info("got answer", "chat_id", chat.ID, "answer", conv.Completion)
 
 		if err := app.repo.Save(ctx, chat); err != nil {
 			helper.Error("failed to save chat after get answer", "chat_id", chat.ID, "error", err.Error())
