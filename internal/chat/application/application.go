@@ -91,11 +91,12 @@ func (app *Application) Prompt(ctx context.Context, log logger.Logger, f domain.
 		conv, err := app.api.Chat(ctx, chat)
 		if err != nil {
 			helper.Error("failed to get completion from chatgpt", "chat_id", chat.ID, "error", err.Error())
-			return
+		} else {
+			helper.Info("got completion", "chat_id", chat.ID, "completion", conv.Completion)
 		}
-		helper.Info("got completion", "chat_id", chat.ID, "answer", conv.Completion)
 
-		if err := app.repo.Save(ctx, chat); err != nil {
+		// 如果context.Context超时，这边必定报错
+		if err := app.repo.Save(context.Background(), chat); err != nil {
 			helper.Error("failed to save chat", "chat_id", chat.ID, "error", err.Error())
 			return
 		}

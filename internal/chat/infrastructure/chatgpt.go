@@ -44,8 +44,7 @@ func (gpt *chatgptService) Chat(ctx context.Context, chat *domain.Chat) (*domain
 		},
 	)
 	if err != nil {
-		cov, _ := chat.Interrupt(err)
-		return cov, nil
+		return chat.Interrupt(err)
 	}
 	return chat.Reply(resp.Choices[0].Message.Content)
 }
