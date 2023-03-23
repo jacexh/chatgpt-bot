@@ -121,11 +121,20 @@ func (repo *repository) Save(ctx context.Context, chat *domain.Chat) error {
 		return err
 	}
 
-	_, err = tx.Exec("UPDATE chat SET counts=?, current=?, version=version+1, deleted=? WHERE id=? AND deleted=0", do.Counts, do.Current, do.Deleted, do.ID)
+	ret, err := tx.Exec("UPDATE chat SET counts=?, current=?, version=version+1, deleted=? WHERE id=? AND deleted=0", do.Counts, do.Current, do.Deleted, do.ID)
 	if err != nil {
 		_ = tx.Rollback()
 		return err
 	}
+	rows, err := ret.RowsAffected()
+	if err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+	if rows == 0 {
+		return errors.New("data outdated")
+	}
+
 	if chat.Current == nil && len(chat.Conversations) > 0 { // conversation完成，则insert最后一条
 		lastConversation := chat.Conversations[len(chat.Conversations)-1]
 		_, err = tx.Exec("INSERT INTO conversation (chat_id, prompt, completion, channel_message_id) SELECT * FROM "+
