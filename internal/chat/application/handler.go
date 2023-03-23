@@ -10,11 +10,18 @@ import (
 	"github.com/go-jimu/components/mediator"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/jacexh/chatgpt-bot/internal/chat/domain"
+	"github.com/silenceper/wechat/v2/officialaccount"
+	"github.com/silenceper/wechat/v2/officialaccount/message"
 )
 
 type TelegramEventHandler struct {
 	bot *tgbotapi.BotAPI
 	log logger.Logger
+}
+
+type WechatEventHandler struct {
+	wechat *officialaccount.OfficialAccount
+	log    logger.Logger
 }
 
 func NewTelegramEventHandler(log logger.Logger, bot *tgbotapi.BotAPI) mediator.EventHandler {
@@ -81,6 +88,55 @@ func (ev *TelegramEventHandler) Handle(ctx context.Context, event mediator.Event
 	if chattable != nil {
 		if _, err := ev.bot.Send(chattable); err != nil {
 			helper.Error("failed to send message to telegram", "error", err.Error())
+		}
+	}
+}
+
+func NewWechatEventHandler(log logger.Logger, wechat *officialaccount.OfficialAccount) mediator.EventHandler {
+	return &WechatEventHandler{
+		log:    log,
+		wechat: wechat,
+	}
+}
+
+func (w *WechatEventHandler) Listening() []mediator.EventKind {
+	return []mediator.EventKind{
+		domain.KindConversationCreated,
+		domain.KindCoversationInterrupted,
+		domain.KindConversationReplied,
+	}
+}
+
+func (w *WechatEventHandler) Handle(ctx context.Context, ev mediator.Event) {
+	event := ev.(domain.MetaEvent)
+	if event.Channel() != domain.ChannelWechat {
+		return
+	}
+	log := logger.With(w.log, "chat_id", event.ChatID, "telegram_user_id", event.From.ChannelUserID, "message_id", event.Conversation.MessageID, "event_kind", event.Kind())
+	helper := logger.NewHelper(log)
+
+	var msg *message.CustomerMessage
+	switch event.Kind() {
+	case domain.KindConversationCreated:
+
+	case domain.KindConversationReplied:
+		msg = &message.CustomerMessage{
+			ToUser:  string(event.Conversation.MessageID),
+			Msgtype: message.MsgTypeText,
+			Text:    &message.MediaText{Content: event.Conversation.Completion},
+		}
+
+	case domain.KindCoversationInterrupted:
+		msg = &message.CustomerMessage{
+			ToUser:  string(event.Conversation.MessageID),
+			Msgtype: message.MsgTypeText,
+			Text:    &message.MediaText{Content: "[ERR] " + event.Error.Error()},
+		}
+	}
+
+	if msg != nil {
+		if err := w.wechat.GetCustomerMessageManager().Send(msg); err != nil {
+			helper.Error("failed to send custom message to wechat user", "error", err.Error())
 		}
 	}
 }

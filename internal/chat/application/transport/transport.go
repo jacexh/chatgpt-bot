@@ -13,45 +13,48 @@ import (
 	"github.com/jacexh/chatgpt-bot/internal/bootstrap/httpsrv"
 	"github.com/jacexh/chatgpt-bot/internal/chat/application"
 	"github.com/jacexh/chatgpt-bot/internal/chat/domain"
+	"github.com/silenceper/wechat/v2/officialaccount"
+	"github.com/silenceper/wechat/v2/officialaccount/message"
 )
 
 type controller struct {
-	bot *tgbotapi.BotAPI
-	app *application.Application
+	tgBot  *tgbotapi.BotAPI
+	wechat *officialaccount.OfficialAccount
+	app    *application.Application
 }
 
 var _ httpsrv.Controller = (*controller)(nil)
 
-func NewController(bot *tgbotapi.BotAPI, app *application.Application) httpsrv.Controller {
-	return &controller{bot: bot, app: app}
+func NewController(app *application.Application, bot *tgbotapi.BotAPI, wc *officialaccount.OfficialAccount) httpsrv.Controller {
+	return &controller{tgBot: bot, app: app, wechat: wc}
 }
 
-func (tg *controller) Slug() string {
+func (ctrl *controller) Slug() string {
 	return "/api/v1"
 }
 
-func (tg *controller) APIs() []httpsrv.API {
+func (ctrl *controller) APIs() []httpsrv.API {
 	return []httpsrv.API{
 		{
 			Method:  http.MethodPost,
 			Pattern: "/telegram/callback",
-			Func:    tg.Webhook,
+			Func:    ctrl.TelegramWebhook,
 		},
 		{
 			Method:  http.MethodGet,
 			Pattern: "/chats/{chatID}",
-			Func:    tg.Query,
+			Func:    ctrl.Query,
 		},
 	}
 }
 
-func (tg *controller) Middlewares() []httpsrv.Middleware {
+func (ctrl *controller) Middlewares() []httpsrv.Middleware {
 	return []httpsrv.Middleware{}
 }
 
-func (tg *controller) Query(w http.ResponseWriter, r *http.Request) {
+func (ctrl *controller) Query(w http.ResponseWriter, r *http.Request) {
 	chatID := chi.URLParam(r, "chatID")
-	dto, err := tg.app.GetByChatID(r.Context(), logger.FromContext(r.Context()), chatID)
+	dto, err := ctrl.app.GetByChatID(r.Context(), logger.FromContext(r.Context()), chatID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
@@ -67,9 +70,9 @@ func (tg *controller) Query(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(data))
 }
 
-func (tg *controller) Webhook(w http.ResponseWriter, r *http.Request) {
+func (ctrl *controller) TelegramWebhook(w http.ResponseWriter, r *http.Request) {
 	helper := logger.FromContextAsHelper(r.Context()).WithContext(r.Context())
-	update, err := tg.bot.HandleUpdate(r)
+	update, err := ctrl.tgBot.HandleUpdate(r)
 	if err != nil {
 		helper.Error("received invalid callback from telegram", "error", err.Error())
 		errMsg, _ := json.Marshal(map[string]string{"error": err.Error()})
@@ -95,18 +98,18 @@ func (tg *controller) Webhook(w http.ResponseWriter, r *http.Request) {
 
 		switch update.Message.Text {
 		case "/start":
-			if err = tg.app.NewChat(r.Context(), log, from); err != nil {
+			if err = ctrl.app.NewChat(r.Context(), log, from); err != nil {
 				chattable = tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprintf("[ERR] %s", err.Error()))
 			} else {
 				chattable = tgbotapi.NewMessage(update.Message.Chat.ID, "开始新的会话")
 			}
 
 		case "/end":
-			tg.app.End(r.Context(), log, from)
-			chattable = tgbotapi.NewMessage(update.Message.Chat.ID, "原会话已经结束")
+			ctrl.app.End(r.Context(), log, from)
+			chattable = tgbotapi.NewMessage(update.Message.Chat.ID, "已结束当前会话")
 
 		case "/current":
-			details, err := tg.app.Get(r.Context(), log, from)
+			details, err := ctrl.app.Get(r.Context(), log, from)
 			var text string
 			if err != nil {
 				text = err.Error()
@@ -118,17 +121,75 @@ func (tg *controller) Webhook(w http.ResponseWriter, r *http.Request) {
 
 		default:
 			msgID := fmt.Sprintf("%d@%d", update.Message.MessageID, update.Message.Chat.ID)
-			if err = tg.app.Prompt(r.Context(), log, from, update.Message.Text, domain.ChannelMessageID(msgID)); err != nil {
+			if err = ctrl.app.Prompt(r.Context(), log, from, update.Message.Text, domain.ChannelMessageID(msgID)); err != nil {
 				chattable = tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprintf("[ERR] %s", err.Error()))
 			}
 		}
 
 		go func(msg tgbotapi.Chattable, log logger.Logger) {
 			if msg != nil {
-				if _, err = tg.bot.Send(msg); err != nil {
+				if _, err = ctrl.tgBot.Send(msg); err != nil {
 					logger.NewHelper(log).WithContext(r.Context()).Error("failed to send chat details", "error", err.Error())
 				}
 			}
 		}(chattable, helper)
+	}
+}
+
+func (ctrl *controller) WechatWebhook(w http.ResponseWriter, r *http.Request) {
+	helper := logger.FromContextAsHelper(r.Context())
+	server := ctrl.wechat.GetServer(r, w)
+
+	server.SetMessageHandler(func(mm *message.MixMessage) *message.Reply {
+		log := logger.With(logger.FromContext(r.Context()), "wechat_open_id", mm.FromUserName, "wechat_message_id", mm.MsgID)
+
+		from := domain.From{
+			Channel:       domain.ChannelWechat,
+			ChannelUserID: domain.ChannelUserID(mm.FromUserName),
+		}
+
+		var text *message.Text
+
+		switch mm.Content {
+		case "/start":
+			if err := ctrl.app.NewChat(r.Context(), log, from); err != nil {
+				text = message.NewText("[ERR] " + err.Error())
+			} else {
+				text = message.NewText("开始新的会话")
+			}
+
+		case "/end":
+			ctrl.app.End(r.Context(), log, from)
+			text = message.NewText("已结束当前对话")
+
+		case "/current":
+			details, err := ctrl.app.Get(r.Context(), log, from)
+			if err != nil {
+				text = message.NewText("[ERR] " + err.Error())
+			} else {
+				data, _ := json.Marshal(details)
+				text = message.NewText(string(data))
+			}
+
+		case "":
+			return nil
+
+		default:
+			if err := ctrl.app.Prompt(r.Context(), log, from, mm.Content, domain.ChannelMessageID(mm.FromUserName)); err != nil {
+				text = message.NewText("[ERR] " + err.Error())
+			}
+		}
+		if text == nil {
+			return nil
+		}
+		return &message.Reply{MsgType: message.MsgTypeText, MsgData: text}
+	})
+
+	if err := server.Serve(); err != nil {
+		helper.WithContext(r.Context()).Error("failed to handle message", "error", err.Error())
+		return
+	}
+	if err := server.Send(); err != nil {
+		helper.WithContext(r.Context()).Error("failed to reply message", "error", err.Error())
 	}
 }
