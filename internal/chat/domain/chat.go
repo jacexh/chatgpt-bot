@@ -133,7 +133,7 @@ func (ct *Chat) Reply(a string) (*Conversation, error) {
 	ct.Conversations = append(ct.Conversations, ct.Current)
 	current := ct.Current
 	ct.Current = nil
-	ct.Event.Add(NewEventPromptAnswerd(ct.ID, ct.From, *current))
+	ct.Event.Add(NewEventPromptReplied(ct.ID, ct.From, *current))
 	return current, nil
 }
 
