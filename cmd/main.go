@@ -11,6 +11,7 @@ import (
 	"github.com/jacexh/chatgpt-bot/internal/bootstrap/httpsrv"
 	"github.com/jacexh/chatgpt-bot/internal/bootstrap/mysql"
 	"github.com/jacexh/chatgpt-bot/internal/bootstrap/telegram"
+	"github.com/jacexh/chatgpt-bot/internal/bootstrap/wechat"
 	"github.com/jacexh/chatgpt-bot/internal/chat"
 	"github.com/jacexh/chatgpt-bot/internal/pkg/context"
 	"github.com/jacexh/chatgpt-bot/internal/pkg/eventbus"
@@ -25,6 +26,7 @@ type Option struct {
 	HTTPServer httpsrv.Option  `json:"http-server" toml:"http-server" yaml:"http-server"`
 	Telegram   telegram.Option `json:"telegram" yaml:"telegram"`
 	ChatGPT    gpt.Option      `json:"chatgpt" yaml:"chatgpt"`
+	Wechat     wechat.Option   `json:"wechat" yaml:"wechat"`
 }
 
 func main() {
@@ -49,9 +51,10 @@ func main() {
 	cg := httpsrv.NewHTTPServer(opt.HTTPServer, log)
 	bot := telegram.NewBotAPI(opt.Telegram, log)
 	gpt := gpt.NewChatGPT(opt.ChatGPT)
+	wc := wechat.NewWechatClient(opt.Wechat)
 
 	// each business layer
-	chat.Init(log, db, cg, eb, bot, gpt)
+	chat.Init(log, db, cg, eb, bot, gpt, wc)
 
 	// graceful shutdown
 	ctx, stop := signal.NotifyContext(context.RootContext(), syscall.SIGINT, syscall.SIGTERM, os.Interrupt)

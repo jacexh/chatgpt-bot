@@ -21,3 +21,8 @@ chatgpt:
 telegram:
   access_token: ${TELEGRAM_ACCESS_TOKEN:abc}
   webhook_link: ${TELEGRAM_WEBHOOK_LINK:http://chatgpt-bot.foobar.com/api/v1/telegram/callback}
+wechat:
+  app_id: ${WECHAT_APP_ID:foobar}
+  app_secret: ${WECHAT_APP_SECRET:foobar}
+  token: ${WECHAT_APP_TOKEN:foobar}
+  encoding_aes_key: ${WECHAT_ENCODING_AES_KEY:foobar}
