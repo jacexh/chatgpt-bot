@@ -23,9 +23,6 @@ func NewTelegramEventHandler(log logger.Logger, bot *tgbotapi.BotAPI) mediator.E
 
 func (ev *TelegramEventHandler) Listening() []mediator.EventKind {
 	return []mediator.EventKind{
-		domain.KindChatFinished,
-		domain.KindChatShutdown,
-		domain.KindChatStartted,
 		domain.KindConversationCreated,
 		domain.KindCoversationInterrupted,
 		domain.KindConversationReplied,
@@ -60,12 +57,6 @@ func (ev *TelegramEventHandler) Handle(ctx context.Context, event mediator.Event
 
 	var chattable tgbotapi.Chattable
 	switch e.Kind() {
-	case domain.KindChatStartted:
-		chattable = tgbotapi.NewMessage(chatID, "已经开启新的会话")
-
-	case domain.KindChatFinished, domain.KindChatShutdown:
-		chattable = tgbotapi.NewMessage(chatID, "当前会话已经结束")
-
 	case domain.KindConversationCreated:
 		chattable = tgbotapi.NewChatAction(chatID, tgbotapi.ChatTyping)
 		if _, err := ev.bot.Request(chattable); err != nil {

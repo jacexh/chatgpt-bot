@@ -71,10 +71,13 @@ func (tg *controller) Handle(w http.ResponseWriter, r *http.Request) {
 		case "/start":
 			if err = tg.app.NewChat(r.Context(), log, from); err != nil {
 				chattable = tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprintf("[ERR] %s", err.Error()))
+			} else {
+				chattable = tgbotapi.NewMessage(update.Message.Chat.ID, "开始新的会话")
 			}
 
 		case "/end":
 			tg.app.End(r.Context(), log, from)
+			chattable = tgbotapi.NewMessage(update.Message.Chat.ID, "原会话已经结束")
 
 		case "/current":
 			details, err := tg.app.Get(r.Context(), log, from)
@@ -94,10 +97,12 @@ func (tg *controller) Handle(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		if chattable != nil {
-			if _, err = tg.bot.Send(chattable); err != nil {
-				logger.NewHelper(log).WithContext(r.Context()).Error("failed to send chat details", "error", err.Error())
+		go func(msg tgbotapi.Chattable, log logger.Logger) {
+			if msg != nil {
+				if _, err = tg.bot.Send(msg); err != nil {
+					logger.NewHelper(log).WithContext(r.Context()).Error("failed to send chat details", "error", err.Error())
+				}
 			}
-		}
+		}(chattable, helper)
 	}
 }

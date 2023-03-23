@@ -91,7 +91,6 @@ func NewChat(f From) *Chat {
 		Version:       0,
 		CreatedAt:     time.Now(),
 	}
-	ct.Event.Add(NewEventChatStartted(ct.ID, f, Conversation{}))
 	return ct
 }
 
@@ -149,7 +148,6 @@ func (ct *Chat) Interrupt(err error) (*Conversation, error) {
 func (ct *Chat) Shutdown() {
 	if ct.Status != StatusEnded {
 		ct.Status = StatusEnded
-		ct.Event.Add(NewEventChatShutdown(ct.ID, ct.From, emptyConversation))
 		if ct.Current != nil {
 			ct.Interrupt(errors.New("shutdown"))
 		}
@@ -165,7 +163,6 @@ func (ct *Chat) IsFinished() bool {
 	}
 	if time.Since(ct.CreatedAt) >= ChatExpirationTime || len(ct.Conversations) >= MaxConversationCounts {
 		ct.Status = StatusEnded
-		ct.Event.Add(NewEventChatFinished(ct.ID, ct.From, emptyConversation))
 		return true
 	}
 	return false
