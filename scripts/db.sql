@@ -1,7 +1,7 @@
 CREATE TABLE `chat` (
   `id` varchar(32) NOT NULL,
   `counts` tinyint NOT NULL DEFAULT '0',
-  `current` text,
+  `current` text NOT NULL,
   `channel` tinyint NOT NULL,
   `channel_user_id` varchar(45) NOT NULL,
   `version` int NOT NULL DEFAULT '0',
