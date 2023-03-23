@@ -54,9 +54,8 @@ func (tg *controller) Handle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	from := domain.From{
-		Channel:           domain.ChannelTelegram,
-		ChannelUserID:     fmt.Sprintf("%d", update.Message.From.ID),
-		ChannelInternalID: fmt.Sprintf("%d+%d", update.Message.Chat.ID, update.Message.MessageID),
+		Channel:       domain.ChannelTelegram,
+		ChannelUserID: domain.ChannelUserID(fmt.Sprintf("%d", update.Message.From.ID)),
 	}
 
 	log := logger.With(helper,
@@ -89,7 +88,8 @@ func (tg *controller) Handle(w http.ResponseWriter, r *http.Request) {
 			chattable = tgbotapi.NewMessage(update.Message.Chat.ID, text)
 
 		default:
-			if err = tg.app.Prompt(r.Context(), log, from, update.Message.Text); err != nil {
+			msgID := domain.ChannelMessageID(fmt.Sprintf("%d", update.Message.MessageID))
+			if err = tg.app.Prompt(r.Context(), log, from, update.Message.Text, msgID); err != nil {
 				chattable = tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprintf("[ERR] %s", err.Error()))
 			}
 		}

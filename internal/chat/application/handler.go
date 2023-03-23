@@ -2,10 +2,8 @@ package application
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strconv"
-	"strings"
 
 	"github.com/go-jimu/components/logger"
 	"github.com/go-jimu/components/mediator"
@@ -29,24 +27,8 @@ func (ev *TelegramEventHandler) Listening() []mediator.EventKind {
 		domain.KindChatStartted,
 		domain.KindConversationCreated,
 		domain.KindCoversationInterrupted,
-		domain.KindConversationAnswered,
+		domain.KindConversationReplied,
 	}
-}
-
-func (ec *TelegramEventHandler) ParseIDs(internalID string) (int64, int, error) {
-	slice := strings.Split(internalID, "+")
-	if len(slice) != 2 {
-		return 0, 0, errors.New("bad internal id")
-	}
-	cid, err := strconv.ParseInt(slice[0], 10, 0)
-	if err != nil {
-		return 0, 0, err
-	}
-	mid, err := strconv.Atoi(slice[1])
-	if err != nil {
-		return 0, 0, err
-	}
-	return cid, mid, nil
 }
 
 func (ev *TelegramEventHandler) Handle(ctx context.Context, event mediator.Event) {
@@ -55,12 +37,17 @@ func (ev *TelegramEventHandler) Handle(ctx context.Context, event mediator.Event
 		return
 	}
 
-	log := logger.With(ev.log, "chat_id", e.ChatID, "telegram_user_id", e.From.ChannelUserID, "telegram_internal_id", e.From.ChannelInternalID, "event_kind", event.Kind())
+	log := logger.With(ev.log, "chat_id", e.ChatID, "telegram_user_id", e.From.ChannelUserID, "event_kind", event.Kind())
 	helper := logger.NewHelper(log)
 
-	chatID, _, err := ev.ParseIDs(e.From.ChannelInternalID)
+	chatID, err := strconv.ParseInt(e.ChatID, 10, 0)
 	if err != nil {
-		helper.Error("failed to parse internal id", "error", err.Error())
+		helper.Error("failed to parse chat id", "error", err.Error())
+		return
+	}
+	msgID, err := strconv.ParseInt(string(e.Conversation.MessageID), 10, 0)
+	if err != nil {
+		helper.Error("failed to parse message id", "error", err.Error())
 		return
 	}
 
@@ -79,11 +66,17 @@ func (ev *TelegramEventHandler) Handle(ctx context.Context, event mediator.Event
 		}
 		return
 
-	case domain.KindConversationAnswered:
-		chattable = tgbotapi.NewMessage(chatID, e.Conversation.Answer)
+	case domain.KindConversationReplied:
+		chattable = tgbotapi.NewMessage(chatID, e.Conversation.Completion)
+		msg := chattable.(tgbotapi.MessageConfig)
+		msg.ReplyToMessageID = int(msgID)
+		chattable = msg
 
 	case domain.KindCoversationInterrupted:
 		chattable = tgbotapi.NewMessage(chatID, fmt.Sprintf("[ERR] %s", e.Error.Error()))
+		msg := chattable.(tgbotapi.MessageConfig)
+		msg.ReplyToMessageID = int(msgID)
+		chattable = msg
 	}
 
 	if chattable != nil {

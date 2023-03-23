@@ -2,6 +2,7 @@ package infrastructure
 
 import (
 	"database/sql"
+	"encoding/json"
 	"time"
 
 	"github.com/go-jimu/components/mediator"
@@ -10,32 +11,32 @@ import (
 
 type (
 	Conversation struct {
-		ID     sql.NullInt32  `db:"id"`
-		ChatID sql.NullString `db:"chat_id"`
-		Prompt sql.NullString `db:"prompt"`
-		Answer sql.NullString `db:"answer"`
-		CTime  sql.NullTime   `db:"ctime"`
-		MTime  sql.NullTime   `db:"mtime"`
+		ID               sql.NullInt32  `db:"id"`
+		ChatID           sql.NullString `db:"chat_id"`
+		Prompt           sql.NullString `db:"prompt"`
+		Completion       sql.NullString `db:"completion"`
+		ChannelMessageID sql.NullString `db:"channel_message_id"`
+		CTime            sql.NullTime   `db:"ctime"`
+		MTime            sql.NullTime   `db:"mtime"`
 	}
 
 	Chat struct {
-		ID                string    `db:"id"`
-		Counts            int       `db:"counts"`
-		CurrentPrompt     string    `db:"current_prompt"`
-		Channel           int       `db:"channel"`
-		ChannelUserID     string    `db:"channel_user_id"`
-		ChannelInternalID string    `db:"channel_internal_id"`
-		Version           int       `db:"version"`
-		CTime             time.Time `db:"ctime"`
-		MTime             time.Time `db:"mtime"`
-		Deleted           int       `db:"deleted"`
+		ID            string         `db:"id"`
+		Counts        int            `db:"counts"`
+		Current       sql.NullString `db:"current"`
+		Channel       int            `db:"channel"`
+		ChannelUserID string         `db:"channel_user_id"`
+		Version       int            `db:"version"`
+		CTime         time.Time      `db:"ctime"`
+		MTime         time.Time      `db:"mtime"`
+		Deleted       int            `db:"deleted"`
 	}
 )
 
-func ConverDO(ch *Chat, cs ...*Conversation) *domain.Chat {
+func ConverDO(ch *Chat, cs ...*Conversation) (*domain.Chat, error) {
 	c := &domain.Chat{
 		ID:            ch.ID,
-		From:          domain.From{Channel: domain.Channel(ch.Channel), ChannelUserID: ch.ChannelUserID, ChannelInternalID: ch.ChannelInternalID},
+		From:          domain.From{Channel: domain.Channel(ch.Channel), ChannelUserID: domain.ChannelUserID(ch.ChannelUserID)},
 		Version:       ch.Version,
 		Counts:        ch.Counts,
 		Conversations: make([]*domain.Conversation, len(cs)),
@@ -43,31 +44,43 @@ func ConverDO(ch *Chat, cs ...*Conversation) *domain.Chat {
 		CreatedAt:     ch.CTime,
 		Event:         mediator.NewEventCollection(),
 	}
-	if ch.CurrentPrompt != "" {
-		c.Current = &domain.Conversation{Prompt: ch.CurrentPrompt}
+	if ch.Current.Valid && ch.Current.String != "" {
+		cu := new(domain.Conversation)
+		if err := json.Unmarshal([]byte(ch.Current.String), cu); err != nil {
+			return nil, err
+		}
+		c.Current = cu
 	}
 
 	for index, con := range cs {
 		c.Conversations[index] = &domain.Conversation{
-			Prompt: con.Prompt.String,
-			Answer: con.Answer.String,
+			MessageID:  domain.ChannelMessageID(con.ChannelMessageID.String),
+			Prompt:     con.Prompt.String,
+			Completion: con.Completion.String,
 		}
 	}
-	return c
+	return c, nil
 }
 
-func ConvertEntityChat(entity *domain.Chat) *Chat {
+func ConvertEntityChat(entity *domain.Chat) (*Chat, error) {
 	c := &Chat{
-		ID:                entity.ID,
-		Counts:            entity.Counts,
-		Channel:           int(entity.From.Channel),
-		ChannelUserID:     entity.From.ChannelUserID,
-		ChannelInternalID: entity.From.ChannelInternalID,
-		Version:           entity.Version,
-		Deleted:           int(entity.Status),
+		ID:            entity.ID,
+		Counts:        entity.Counts,
+		Channel:       int(entity.From.Channel),
+		ChannelUserID: string(entity.From.ChannelUserID),
+		Version:       entity.Version,
+		Deleted:       int(entity.Status),
 	}
 	if entity.Current != nil {
-		c.CurrentPrompt = entity.Current.Prompt
+		data, err := json.Marshal(entity.Current)
+		if err != nil {
+			return nil, err
+		}
+
+		str := string(data)
+		if str != "" && str != "{}" {
+			c.Current = sql.NullString{String: str, Valid: true}
+		}
 	}
-	return c
+	return c, nil
 }

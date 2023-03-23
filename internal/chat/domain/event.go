@@ -18,7 +18,7 @@ type Event interface {
 const (
 	KindChatStartted           mediator.EventKind = "event_chat_startted"
 	KindConversationCreated    mediator.EventKind = "event_conversation_created"
-	KindConversationAnswered   mediator.EventKind = "event_conversation_answered"
+	KindConversationReplied    mediator.EventKind = "event_conversation_replied"
 	KindCoversationInterrupted mediator.EventKind = "event_conversation_interruptted"
 	KindChatShutdown           mediator.EventKind = "event_chat_has_been_shutdown"
 	KindChatFinished           mediator.EventKind = "event_chat_finished"
@@ -50,7 +50,7 @@ func NewEventConversationCreated(cid string, f From, c Conversation) Event {
 }
 
 func NewEventPromptAnswerd(cid string, f From, c Conversation) Event {
-	return NewEvent(cid, f, c, KindConversationAnswered)
+	return NewEvent(cid, f, c, KindConversationReplied)
 }
 
 func NewConversationInterrupted(cid string, f From, c Conversation, err error) Event {
