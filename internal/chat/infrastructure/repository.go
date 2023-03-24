@@ -112,6 +112,7 @@ func (repo *repository) Save(ctx context.Context, chat *domain.Chat) error {
 	}
 
 	// 更新记录
+	chat.IsFinished()
 	do, err := ConvertEntityChat(chat)
 	if err != nil {
 		return err
