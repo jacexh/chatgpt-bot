@@ -82,18 +82,18 @@ func (ctrl *controller) TelegramWebhook(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	from := domain.From{
-		Channel:       domain.ChannelTelegram,
-		ChannelUserID: domain.ChannelUserID(fmt.Sprintf("%d", update.Message.From.ID)),
-	}
-
-	log := logger.With(helper,
-		"telegram_user_id", update.Message.From.ID,
-		"telegram_chat_id", update.Message.Chat.ID,
-		"telegram_message_id", update.Message.MessageID,
-	)
-
 	if update.Message != nil {
+		from := domain.From{
+			Channel:       domain.ChannelTelegram,
+			ChannelUserID: domain.ChannelUserID(fmt.Sprintf("%d", update.Message.From.ID)),
+		}
+
+		log := logger.With(helper,
+			"telegram_user_id", update.Message.From.ID,
+			"telegram_chat_id", update.Message.Chat.ID,
+			"telegram_message_id", update.Message.MessageID,
+		)
+
 		var chattable tgbotapi.Chattable
 
 		switch update.Message.Text {
